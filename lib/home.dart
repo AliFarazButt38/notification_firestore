@@ -13,49 +13,30 @@ class _HomeState extends State<Home> {
   FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
   @override
-   void initState(){
-    getToken();
-    requestPermission();
-    initInfo();
+  void initState() {
     super.initState();
+    getToken();
+    // initInfo();
   }
+  Future getDeviceToken() async {
+    FirebaseMessaging _firebaseMessage= FirebaseMessaging.instance;
+    String? deviceToken= await _firebaseMessage.getToken();
+    return (deviceToken==null) ? " " : deviceToken;
+  }
+
 
   getToken() async{
     String deviceToken= await getDeviceToken();
     print('Device-token(!!!!!!!!!!!)$deviceToken');
   }
-  void requestPermission()async{
-    FirebaseMessaging messaging = FirebaseMessaging.instance;
-
-    NotificationSettings settings = await messaging.requestPermission(
-      alert: true,
-      announcement: false,
-      badge: true,
-      carPlay: false,
-      criticalAlert: false,
-      provisional: false,
-      sound: true,
-    );
-
-    if(settings.authorizationStatus == AuthorizationStatus.authorized){
-      print('user granted  permission');
-    }else if(settings.authorizationStatus == AuthorizationStatus.provisional){
-      print('user granted provisional permission');
-    }else{
-      print('user declined permission');
-    }
-  }
-  void onDidReceiveNotificationResponse(NotificationResponse notificationResponse) async {
-    final String? payload = notificationResponse.payload;
-    if (notificationResponse.payload != null) {
-      debugPrint('notification payload: $payload');
-    }
-  }
-  initInfo()async{
-    var androidInitialize = const AndroidInitializationSettings('@mipmap/ic_launcher');
-    var iosInitialize = const DarwinInitializationSettings();
-    var initializationSettings = InitializationSettings(android: androidInitialize, iOS: iosInitialize);
-    flutterLocalNotificationsPlugin.initialize(initializationSettings,onDidReceiveNotificationResponse: onDidReceiveNotificationResponse);
+  void initInfo() async {
+    var androidInitialize =
+    const AndroidInitializationSettings('@mipmap/ic_launcher');
+    var initializationSettings = InitializationSettings(
+        android: androidInitialize, );
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings,
+        onDidReceiveBackgroundNotificationResponse: onDidReceiveNotificationResponse,
+        onDidReceiveNotificationResponse: onDidReceiveNotificationResponse);
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
       print('Got a message whilst in the foreground!');
@@ -63,32 +44,66 @@ class _HomeState extends State<Home> {
 
       if (message.notification != null) {
         print('Message also contained a Notification: ${message.notification}');
-        AndroidNotificationDetails androidNotificationDetails = const AndroidNotificationDetails('12132', 'wemeet', importance: Importance.high,priority: Priority.high,playSound: true);
-        NotificationDetails notificationDetails = NotificationDetails(android: androidNotificationDetails,iOS: const DarwinNotificationDetails());
-        await flutterLocalNotificationsPlugin.show(0, message.notification?.title, message.notification?.body, notificationDetails,payload: message.data['title']);
+        AndroidNotificationDetails androidNotificationDetails =
+        const AndroidNotificationDetails('12132', 'wemeet',
+            importance: Importance.high,
+            priority: Priority.high,
+            playSound: true);
+        NotificationDetails notificationDetails = NotificationDetails(
+            android: androidNotificationDetails);
+        await flutterLocalNotificationsPlugin.show(
+            0,
+            message.notification!.title,
+            message.notification!.body,
+            notificationDetails,
+            payload: message.data['title']);
       }
     });
-
   }
 
-
+  Future<void> onDidReceiveNotificationResponse(
+      NotificationResponse notificationResponse) async {
+    debugPrint('notification payload: ${notificationResponse.payload}');
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
-        child: Text("Notifications"),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton(
+              onPressed: () {
+                showNotification();
+              },
+              child: Text("Click"),
+            ),
+            Center(
+              child: Text("Notifications"),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Future getDeviceToken() async {
-    FirebaseMessaging _firebaseMessage= FirebaseMessaging.instance;
-    String? deviceToken= await _firebaseMessage.getToken();
-    return (deviceToken==null) ? " " : deviceToken;
+  Future<void> showNotification() async {
+    AndroidNotificationDetails androidPlatformChannelSpecifics =
+    const AndroidNotificationDetails(
+        'your channel id', 'your channel name',
+        importance: Importance.max,
+        priority: Priority.high,
+        ticker: 'ticker');
+    NotificationDetails platformChannelSpecifics = NotificationDetails(
+        android: androidPlatformChannelSpecifics);
+    await flutterLocalNotificationsPlugin.show(
+      0,
+      'New Notification',
+      'This is a test notification',
+      platformChannelSpecifics,
+      payload: 'New Payload',
+    );
+
   }
 }
-
-
-
-
